@@ -1,7 +1,3 @@
-provider "aws" {
-  region = "us-gov-east-1"
-}
-
 locals {
   source_repo = "ghcr.io/containerd/busybox"
 }
