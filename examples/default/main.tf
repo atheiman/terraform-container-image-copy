@@ -9,7 +9,7 @@ resource "aws_ecr_repository" "repo" {
   force_delete         = true
 }
 
-module "mirror" {
+module "container_image_copy_busybox" {
   source = "../../"
 
   source_repository      = local.source_repo

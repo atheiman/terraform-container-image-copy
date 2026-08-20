@@ -1,4 +1,16 @@
 locals {
+  # Source registry host (everything before the first /)
+  source_registry = split("/", var.source_repository)[0]
+
+  # Detect if source is an ECR registry
+  source_is_ecr = can(regex("^[0-9]+\\.dkr\\.ecr\\.[a-z0-9-]+\\.(amazonaws\\.com|amazonaws\\.com\\.cn)$", local.source_registry))
+
+  # Extract AWS region from ECR registry URI when applicable
+  source_ecr_region = local.source_is_ecr ? regex("dkr\\.ecr\\.([a-z0-9-]+)\\.", local.source_registry)[0] : ""
+
+  # Generate ECR login command for convenience so user does not need to provide it
+  source_ecr_login_command = "aws ecr get-login-password --region \"${local.source_ecr_region}\" | crane auth login --username AWS --password-stdin \"${local.source_registry}\""
+
   # Destination registry host (everything before the first /)
   dest_registry = split("/", var.destination_repository)[0]
 
@@ -44,7 +56,27 @@ locals {
     for source_tag, extra_tags in var.tags : concat([source_tag], extra_tags)
   ]))
 
+  source_login_command = var.source_login_command != "" ? var.source_login_command : local.source_is_ecr ? local.source_ecr_login_command : ""
+
   destination_login_command = var.destination_login_command != "" ? var.destination_login_command : local.dest_is_ecr ? local.dest_ecr_login_command : ""
+
+  # Login script for the source registry, reused by the check and copy steps.
+  # Priority: source_login_command (if provided) > auto ECR login > anonymous (no-op)
+  # Sources are frequently public, so when no login command is available we skip login and
+  # let crane access the source anonymously rather than failing.
+  # All output is redirected to stderr to keep stdout clean for data.external JSON.
+  source_login_script = <<-EOT
+    %{if local.source_login_command != ""}
+    # Only log in to source registry if not already authenticated
+    if ! crane auth get '${local.source_registry}' >/dev/null 2>&1; then
+      echo "Logging in to ${local.source_registry}..." >&2
+      ${local.source_login_command} >&2
+    fi
+    %{else}
+    # No source_login_command provided; crane will access the source anonymously.
+    :
+    %{endif}
+  EOT
 
   # Login script reused by both the check and copy steps.
   # Priority: destination_login_command (if provided) > auto ECR login > no-op

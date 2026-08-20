@@ -7,6 +7,7 @@ data "external" "check_destination" {
   for_each = local.copy_operations_map
 
   program = ["bash", "-c", <<-EOT
+    ${local.source_login_script}
     ${local.dest_login_script}
 
     source_digest="$(crane digest "${each.value.source_ref}" 2>/dev/null || true)"
@@ -58,6 +59,7 @@ resource "terraform_data" "copy" {
         exit 0
       fi
 
+      ${local.source_login_script}
       ${local.dest_login_script}
 
       echo "Copying '$${SOURCE_REF}' -> '$${DEST_REF}'"

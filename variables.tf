@@ -40,13 +40,29 @@ variable "prune_undeclared_tags" {
   default     = true
 }
 
+variable "source_login_command" {
+  description = <<-EOT
+    Command to authenticate to the source registry. If the source repository is an ECR
+    registry, the aws-cli ECR registry login command will be generated automatically, but setting
+    this variable will override the generated command.
+
+    Leave empty for public source registries; crane will access the source anonymously.
+
+    Example: "echo "$SRC_REGISTRY_PASSWORD" | crane auth login --username user --password-stdin public-registry.example.com"
+
+    Be aware that this command will be run in a bash shell exactly as it is received. Trust the source that is configuring this variable value.
+  EOT
+  type        = string
+  default     = ""
+}
+
 variable "destination_login_command" {
   description = <<-EOT
     Command to authenticate to the destination registry. If the destination repository is an ECR
     registry, the aws-cli ECR registry login command will be generated automatically, but setting
     this variable will override the generated command.
 
-    Example: "echo 'mypassword' | crane auth login --username user --password-stdin myregistry.example.com"
+    Example: "echo "$DEST_REGISTRY_PASSWORD" | crane auth login --username user --password-stdin internal-registry.example.net"
 
     Be aware that this command will be run in a bash shell exactly as it is received. Trust the source that is configuring this variable value.
   EOT
