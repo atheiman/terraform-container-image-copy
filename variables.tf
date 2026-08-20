@@ -23,13 +23,32 @@ variable "tags" {
   type        = map(list(string))
 }
 
+variable "prune_undeclared_tags" {
+  description = <<-EOT
+    When true, delete any tags in the destination repository that are not declared
+    in the 'tags' variable. This runs on every apply after all copies and additional
+    tags are applied.
+
+    "Undeclared" covers both tags previously managed by this module but since removed
+    from 'tags', and tags added manually outside of the Terraform workflow.
+
+    WARNING: This deletes any tag in the destination repository not declared in 'tags',
+    including tags pushed by other tooling. Disable this if the destination repository
+    is shared.
+  EOT
+  type        = bool
+  default     = true
+}
+
 variable "destination_login_command" {
   description = <<-EOT
-    Command to authenticate to the destination registry. Only used when the
-    destination is NOT an ECR registry (ECR login is handled automatically).
-    The command should authenticate crane to the destination registry.
+    Command to authenticate to the destination registry. If the destination repository is an ECR
+    registry, the aws-cli ECR registry login command will be generated automatically, but setting
+    this variable will override the generated command.
 
     Example: "echo 'mypassword' | crane auth login --username user --password-stdin myregistry.example.com"
+
+    Be aware that this command will be run in a bash shell exactly as it is received. Trust the source that is configuring this variable value.
   EOT
   type        = string
   default     = ""

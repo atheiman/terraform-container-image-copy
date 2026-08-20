@@ -37,6 +37,13 @@ locals {
   copy_operations_map = { for op in local.copy_operations : op.key => op }
   tag_operations_map  = { for op in local.tag_operations : op.key => op }
 
+  # Complete set of destination tags this configuration manages. Every source tag is
+  # copied under the same tag, plus any additional destination tags. Any tag present in
+  # the destination repo but absent from this list is considered undeclared and removed.
+  expected_dest_tags = distinct(flatten([
+    for source_tag, extra_tags in var.tags : concat([source_tag], extra_tags)
+  ]))
+
   destination_login_command = var.destination_login_command != "" ? var.destination_login_command : local.dest_is_ecr ? local.dest_ecr_login_command : ""
 
   # Login script reused by both the check and copy steps.
